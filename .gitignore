@@ -1,0 +1,8 @@
+# Lua/Neovim
+*.luac
+.luarc.json.bak
+
+# Editor / OS cruft
+.DS_Store
+*.swp
+tags
