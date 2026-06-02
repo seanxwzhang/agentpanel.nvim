@@ -122,7 +122,9 @@ local function find_codex_id(session, launch_time)
       local first = (vim.fn.readfile(f, "", 1) or {})[1]
       local ok, obj = pcall(vim.json.decode, first or "")
       local p = ok and type(obj) == "table" and obj.payload or nil
-      if p and p.id and same_path(p.cwd, session.cwd) then
+      -- Skip the source conversation when capturing a fork's id: the fork runs
+      -- in the source's cwd, so a still-warm source log could otherwise win.
+      if p and p.id and p.id ~= session._fork_from and same_path(p.cwd, session.cwd) then
         best_id, best_mtime = p.id, mtime
       end
     end
@@ -138,8 +140,10 @@ local function find_claude_id(session, launch_time)
   local best_id, best_mtime
   for _, f in ipairs(vim.fn.globpath(dir, "*.jsonl", false, true)) do
     local mtime = vim.fn.getftime(f)
-    if mtime >= launch_time - 2 and (not best_mtime or mtime >= best_mtime) then
-      best_id, best_mtime = vim.fn.fnamemodify(f, ":t:r"), mtime
+    local id = vim.fn.fnamemodify(f, ":t:r") -- filename IS the session id
+    -- Skip the source conversation when capturing a fork's id (same cwd slug).
+    if id ~= session._fork_from and mtime >= launch_time - 2 and (not best_mtime or mtime >= best_mtime) then
+      best_id, best_mtime = id, mtime
     end
   end
   return best_id
@@ -177,7 +181,13 @@ local function launch_spec(session)
   if session._fresh then
     agentcmd = agent.cmd
   elseif session.agent_session_id and agent.resume_id then
+    -- Once we've captured our OWN id (a fork mints a fresh one on first launch),
+    -- resume that exact conversation. Checked before _fork_from so re-opening a
+    -- fork resumes it rather than forking the source again.
     agentcmd = vim.list_extend(vim.deepcopy(agent.resume_id), { session.agent_session_id })
+  elseif session._fork_from and agent.fork_id then
+    -- First launch of a fork: branch a new conversation off the source's id.
+    agentcmd = vim.list_extend(vim.deepcopy(agent.fork_id), { session._fork_from })
   else
     agentcmd = agent.resume or agent.cmd
   end

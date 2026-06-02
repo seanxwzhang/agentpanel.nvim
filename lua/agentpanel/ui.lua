@@ -300,6 +300,7 @@ local function render_hint()
     { "↵", "open" },
     { "e", "edit → worktree tab" },
     { "c", "copilot sidecar" },
+    { "F", "fork" },
     { "r", "rename" },
     { "a", (sel and sel.archived) and "unarchive" or "archive" },
     { "dd", "delete" },
@@ -538,6 +539,41 @@ local function action_rename()
   end)
 end
 
+-- `F`: fork the selected conversation. Creates a NEW session that branches off
+-- the source's history — the two then diverge independently — and runs in the
+-- SAME worktree/cwd as the source. Both codex and claude support forking
+-- natively (see agent.fork_id); the first launch issues the fork command and
+-- the new conversation's own id is captured for subsequent resumes.
+local function action_fork()
+  local s = current_session()
+  if not s then return end
+  local agent = cfg.options.agents[s.agent]
+  if not (agent and agent.fork_id) then
+    vim.notify("agentpanel: " .. tostring(s.agent) .. " can't fork sessions", vim.log.levels.WARN)
+    return
+  end
+  if not s.agent_session_id then
+    vim.notify("agentpanel: open this session once before forking (no captured id yet)", vim.log.levels.WARN)
+    return
+  end
+  local fork = {
+    id = util.uid(),
+    title = (s.title or agent.label) .. " (fork)",
+    agent = s.agent,
+    project_name = s.project_name,
+    project_root = s.project_root,
+    cwd = s.cwd, -- same worktree / dir as the source
+    mode = s.mode,
+    worktree = s.worktree and vim.deepcopy(s.worktree) or nil,
+    branch = s.branch,
+    created_at = os.time(),
+    last_active = os.time(),
+    _fork_from = s.agent_session_id, -- consumed on first launch (terminal.launch_spec)
+  }
+  store.add(fork)
+  M.after_create(fork.id)
+end
+
 -- Toggle the selected conversation's archived flag. Archiving moves it to the
 -- bottom "Archived" section; unarchiving returns it to its project group.
 local function action_archive()
@@ -586,6 +622,7 @@ local function setup_rail_keymaps(buf)
   vim.keymap.set("n", "c", action_copilot, { buffer = buf, silent = true, desc = "Drop session into copilot sidecar" })
   map("cx", function() require("agentpanel.newsession").open "codex" end, "New codex session")
   map("cc", function() require("agentpanel.newsession").open "claude" end, "New claude session")
+  map("F", action_fork, "Fork conversation (same worktree)")
   map("r", action_rename, "Rename conversation")
   map("a", action_archive, "Archive/unarchive conversation")
   map("A", toggle_archived_section, "Toggle archived section")

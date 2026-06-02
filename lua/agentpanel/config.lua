@@ -19,6 +19,10 @@ M.defaults = {
   --   resume     fallback when no session id was captured (e.g. legacy sessions
   --              created before id-capture, or capture failed). These resume the
   --              most-recent conversation, so they are NOT session-specific.
+  --   fork_id    branch a NEW conversation off a SPECIFIC prior session — the
+  --              source's captured agent session id is appended. The fork shares
+  --              the source's history but then diverges independently. Used by
+  --              the rail's `F` action (forks in the source's same worktree/cwd).
   agents = {
     codex = {
       label = "codex",
@@ -26,6 +30,7 @@ M.defaults = {
       cmd = { "codex" },
       resume_id = { "codex", "resume" }, -- + <session id>
       resume = { "codex", "resume", "--last" },
+      fork_id = { "codex", "fork" }, -- + <source session id>
     },
     claude = {
       label = "claude",
@@ -33,6 +38,7 @@ M.defaults = {
       cmd = { "claude" },
       resume_id = { "claude", "--resume" }, -- + <session id>
       resume = { "claude", "--continue" },
+      fork_id = { "claude", "--fork-session", "--resume" }, -- + <source session id>
     },
   },
 

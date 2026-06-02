@@ -20,6 +20,10 @@ an agent finishes and is waiting on you.
 - **Codex and Claude.** Start a fresh `codex` or `claude` session, or resume a
   *specific* prior conversation by its captured session id (not just the most
   recent one).
+- **Fork a conversation.** `F` on a session branches a new conversation off its
+  history — the two diverge independently — running in the **same worktree**.
+  Uses each CLI's native fork (`codex fork <id>` / `claude --fork-session
+  --resume <id>`).
 - **Git worktrees, first-class.** Launch a session in a brand-new
   `git worktree add`'d branch so parallel agents never step on each other. Press
   `e` to drop into the editor with the cwd set to that worktree's root.
@@ -77,6 +81,7 @@ an agent finishes and is waiting on you.
 | `↵` / `l` / `<Tab>` | Open the selected conversation |
 | `<C-l>` / `<C-h>` | Switch between rail and session pane |
 | `cx` / `cc`| New **c**ode**x** / **c**laude session  |
+| `F`        | **F**ork the conversation (same worktree) |
 | `e`        | Drop into the editor at the worktree    |
 | `c`        | Drop the session into a copilot sidecar |
 | `r`        | Rename conversation                     |
